@@ -11,6 +11,7 @@ import (
 	"github.com/base58"
 	"log"
 	"math/big"
+	"strings"
 )
 
 //交易输入
@@ -42,10 +43,10 @@ func (t *Transaction) SetId() {
 	t.TXHash = hash[:]
 }
 func NewOutput(value float64, address string) *TxOutput {
-	var Output *TxOutput
+	var Output TxOutput
 	Output.Value = value
 	Output.LockWithHash(address)
-	return Output
+	return &Output
 }
 func (output *TxOutput) LockWithHash(address string) {
 	decode := base58.Decode(address)
@@ -78,7 +79,7 @@ func NewTransaction(from, to string, amount float64, blc *BlockChain) *Transacti
 		return nil
 	}
 	wallet := wallets.Wallets[from]
-	privateKey := wallet.privateKey
+	privateKey := wallet.PrivateKey
 	pubkey := wallet.Pubkey
 	pubkeyHash := HashPubkey(pubkey)
 	var inputs []*TxInput
@@ -109,17 +110,24 @@ func NewTransaction(from, to string, amount float64, blc *BlockChain) *Transacti
 	blc.SignTransaction(&tx, privateKey)
 	return &tx
 }
-func (tx *Transaction) Sign(privayekey *ecdsa.PrivateKey, precTxs map[string]*Transaction) bool {
+func (tx *Transaction) Sign(privayekey *ecdsa.PrivateKey, prevTxs map[string]*Transaction) bool {
 	fmt.Printf("对交易进行签名...\n")
 	txCopy := tx.TrimmedCopy()
+	//遍历copy的input给每个input添加pubkeyhash
 	for i, input := range txCopy.Inputs {
-		prevTx := precTxs[string(input.TXId)]
+		//查看
+		prevTx := prevTxs[string(input.TXId)]
+		//将每个input的pubkey字段改为PubkeyHash
 		txCopy.Inputs[i].Pubkey = prevTx.Outputs[input.Index].PubkeyHash
 		txCopy.SetId()
+		//统一清零
 		txCopy.Inputs[i].Pubkey = nil
+		//需要签名的数据源
 		signdatahash := txCopy.TXHash
+		//私钥签名
 		r, s, err := ecdsa.Sign(rand.Reader, privayekey, signdatahash)
 		if err != nil {
+
 			log.Panic(err)
 		}
 		signature := append(r.Bytes(), s.Bytes()...)
@@ -140,14 +148,18 @@ func (tx *Transaction) TrimmedCopy() *Transaction {
 }
 func (tx *Transaction) Verify(prevTxs map[string]*Transaction) bool {
 	txCopy := tx.TrimmedCopy()
-	for i, input := range txCopy.Inputs {
+	//对当前交易的inputs遍历
+	for i, input := range tx.Inputs {
 		prevTx := prevTxs[string(input.TXId)]
+		//与前面的数据源准备一致
 		txCopy.Inputs[i].Pubkey = prevTx.Outputs[input.Index].PubkeyHash
-		tx.SetId()
-		txData := tx.TXHash
+		txCopy.SetId()
+		txData := txCopy.TXHash
+		fmt.Println(txData)
 		txCopy.Inputs[i].Pubkey = nil
 		pubKey := input.Pubkey
 		signature := input.Sig
+		fmt.Println("椒盐的", input.Sig)
 
 		//根据signature 切出来r1, s1, 一分为二
 		r1 := big.Int{}
@@ -179,4 +191,28 @@ func (tx *Transaction) Verify(prevTxs map[string]*Transaction) bool {
 	}
 	fmt.Printf("恭喜，校验成功！\n")
 	return true
+}
+func (tx *Transaction) String() string {
+	//fmt.Sprintf("打印交易细节...\n")
+	//return string("hello")
+	var lines []string
+
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.TXHash))
+
+	for i, input := range tx.Inputs {
+
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       TXID:      %x", input.TXId))
+		lines = append(lines, fmt.Sprintf("       Index:       %d", input.Index))
+		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Sig))
+		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.Pubkey))
+	}
+
+	for i, output := range tx.Outputs {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %f", output.Value))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubkeyHash))
+	}
+
+	return strings.Join(lines, "\n")
 }

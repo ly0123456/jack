@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 )
 
 const walletFileName = "wallet.dat"
@@ -17,10 +18,10 @@ type Wallets struct {
 
 //实例化钱包
 func NewWallets() *Wallets {
-	var wallets *Wallets
+	var wallets Wallets
 	wallets.Wallets = make(map[string]*Wallet)
 	wallets.LoadFromFile()
-	return wallets
+	return &wallets
 }
 func (ws *Wallets) CreateWallets()string {
 	//new一个私钥对
@@ -82,5 +83,6 @@ func (ws *Wallets) GetAddresses() []string {
 	for address := range ws.Wallets {
 		addresses = append(addresses, address)
 	}
+	sort.Strings(addresses)
 	return addresses
 }

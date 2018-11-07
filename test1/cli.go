@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"strconv"
 )
@@ -12,59 +11,77 @@ type ClI struct {
 }
 const Usage = `
 Usage:
-		./blockchain createBlockChain ADDRESS "创建区块链"
-	./blockchain addBlock DATA   "添加数据到区块链"
-	./blockchain printChain "打印区块链"
-	./blockchian getBalance ADDRESS "获取指定地址余额"
-	./blockchian send FROM TO AMOUNT MINER DATA  "转账"
-	./blockchian createWallet "创建钱包地址"
-	./blockchian listAllAddress "打印钱包中的所有地址"
+	createbc ADDRESS "创建区块链"
+	print "打印区块链"
+	printtx "打印交易"
+	balc ADDRESS "获取指定地址余额"
+	send <FROM> <TO> <AMOUNT> "转账"
+	mine [MINER] [DATA] "挖矿"，默认:  1NVwrN4yZVV3hW1PkXCg38sGcsXMKcYaw7
+	createwt "创建钱包地址"
+	list "打印钱包中的所有地址"
+	status "查看当前待确认交易数量"
 `
-func checkArgs(count int) {
-	if len(os.Args) != count {
+func checkArgs(cmds []string, count int) bool {
+	if len(cmds) != count {
 		fmt.Println("参数无效!")
-		os.Exit(1)
+		//os.Exit(1)
+		return false
 	}
+
+	return true
 }
 //实现命令行的方法
-func (C *ClI)Run()  {
-	args := os.Args
-	if len(args)<2{
-		fmt.Println("输入的参数有误，请参照")
-		fmt.Println(Usage)
-		os.Exit(-1)
-	}
-	switch args[1] {
-	case "createBlockChain":
-		checkArgs(3)
+func (C *ClI)Run(cmds []string)  {
+	args:=cmds
+	switch args[0] {
+	case "createbc":
+		if !checkArgs(cmds,2) {return}
 			fmt.Println("创建区块链的命令被调用...")
-			address:=args[2]
+			address:=args[1]
 			C.CreateBlockChain(address)
 
 	case "send":
-		checkArgs(7)
-		from:=args[2]
-		to:=args[3]
-		amount,_:=strconv.ParseFloat(args[4],64)
-		miner:=args[5]
-		data:=args[6]
-		C.Send(from,to,amount,miner,data)
-	case "printChain":
+		if !checkArgs(cmds,4) {return}
+		from:=args[1]
+		to:=args[2]
+		amount,_:=strconv.ParseFloat(args[3],64)
+
+		C.Send(from,to,amount)
+	case "mine":
+		var miner ,data string
+		if len(cmds)==3 {
+			miner=args[1]
+			data=args[2]
+		}else {
+			miner=""
+			data="奖励"
+		}
+		C.Mine(miner,data)
+
+	case "print":
+		if !checkArgs(cmds,1) {return}
+
 		fmt.Println("打印区块被调用.....")
 		C.PrintChain()
-	case "getBalance":
-		checkArgs(3)
-		address:=args[2]
+	case "balc":
+		if !checkArgs(cmds,2) {return}
+		address:=args[1]
 		C.GetBalance(address)
-	case "createWallet":
+	case "createwt":
+		if !checkArgs(cmds,1) {return}
 		fmt.Printf("createWallet命令被调用\n")
-		checkArgs(2)
-
 		C.CreateWallet()
-	case "listAllAddress":
+	case "list":
+		if !checkArgs(cmds,1) {return}
 		fmt.Printf("listAllAddress命令被调用\n")
-		checkArgs(2)
 		C.ListAllAddress()
+	case "status":
+		if !checkArgs(cmds,1) {return}
+		fmt.Printf("status命令被调用\n")
+		C.Status()
+	case "printtx":
+		if !checkArgs(cmds,1) {return}
+		C.PrintTx()
 	case "help":
 		C.Help()
 	default:

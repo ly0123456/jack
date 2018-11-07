@@ -1,9 +1,8 @@
 package main
 
 import (
-	"crypto/sha256"
-	"golang.org/x/crypto/ripemd160"
 	"os"
+	"fmt"
 )
 //判断文件是否存在
 func IsExist(path string) bool {
@@ -13,4 +12,8 @@ func IsExist(path string) bool {
 	}
 	return true
 }
-//将pubkey转化为pubkeyhash
+func Welcome() {
+	fmt.Printf("\n====================================================================\n")
+	fmt.Printf("                   欢迎来到传智播客!(英雄联盟)\n")
+	fmt.Printf("====================================================================\n")
+}
