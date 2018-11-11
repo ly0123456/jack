@@ -1,11 +1,11 @@
 package main
 
 import (
-	"math/big"
-	"crypto/sha256"
-	"fmt"
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
+	"math/big"
 )
 
 //定义一个工作量证明的类
@@ -64,7 +64,6 @@ func (pow *ProofOfWork) preHashData(nonce uint64) []byte {
 		pow.Block.PrevBlockHash,
 		pow.Block.MorkHash,
 		Num2Byte(pow.Block.Timestamp),
-		pow.Block.Data,
 		Num2Byte(pow.Block.Diff),
 		Num2Byte(nonce),
 	}, []byte{})
