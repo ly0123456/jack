@@ -3,8 +3,8 @@ package main
 import (
 	"./bolt"
 	"fmt"
-	"os"
 	"log"
+	"os"
 )
 
 //定义一个数据库的名字
@@ -23,10 +23,10 @@ type BlockChain struct {
 }
 
 //创建一个新的区块链
-func CreateBlockChain() *BlockChain {
+func CreateBlockChain(address string) *BlockChain {
 	//定义一个当前区块的hash
 	var LastHash []byte
-	if IsExist(){
+	if IsExist() {
 		fmt.Println("数据库已经存在")
 		os.Exit(-1)
 	}
@@ -45,7 +45,8 @@ func CreateBlockChain() *BlockChain {
 			if e != nil {
 				log.Panic(e)
 			}
-			newBlock := NewBlock("Gensis Block..... ", []byte{})
+			tx := NewCoinbaseTx(address, "Gensis Block..... ")
+			newBlock := NewBlock([]*Transaction{tx}, []byte{})
 			//将新区块存入数据库，key就是当前区块的hash
 			e = buckt.Put(newBlock.Hash, newBlock.Encode())
 			if e != nil {
@@ -68,7 +69,7 @@ func CreateBlockChain() *BlockChain {
 func NewBlockChain() *BlockChain {
 	//定义一个当前区块的hash
 	var LastHash []byte
-	if !IsExist(){
+	if !IsExist() {
 		fmt.Println("数据库不存在，请检查")
 		os.Exit(-1)
 	}
@@ -90,17 +91,16 @@ func NewBlockChain() *BlockChain {
 
 		//满足blc的结构
 
-
 		return nil
 	})
 
 	return &BlockChain{db, LastHash}
 }
-func (blc *BlockChain) AddBlock(data string) {
+func (blc *BlockChain) AddBlock(txs []*Transaction) {
 	//找到前区块的hash
 	lastHash := blc.LastHash
 	//创建新的区块链
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(txs, lastHash)
 	newBlock.Height++
 	//将新区快存入数据库
 	blc.Db.Update(func(tx *bolt.Tx) error {
@@ -181,10 +181,62 @@ func (blc *BlockChain) PrintBlock() {
 		}
 	}
 }
-func IsExist()bool {
+func IsExist() bool {
 	_, err := os.Stat(BlockChainDB)
-	if os.IsNotExist(err){
+	if os.IsNotExist(err) {
 		return false
 	}
 	return true
+}
+func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
+	var UTXOs []*TxOutput
+	spendUtxos := make(map[string][]uint64)
+
+	it := blc.NewIterator()
+
+	for {
+		block := it.Next()
+		for _, tx := range block.Txs {
+		OUT:
+			for i, UTXO := range tx.Outputs {
+
+				if UTXO.ScriptPubKey == address {
+					fmt.Println("zhaodao l ")
+					if len(spendUtxos[string(tx.TXHash)]) != 0 {
+						for _, index := range spendUtxos[string(tx.TXHash)] {
+							if index == uint64(i) {
+								continue OUT
+							}
+						}
+					}
+
+					UTXOs = append(UTXOs, UTXO)
+				}
+			}
+			for _, input := range tx.Inputs {
+				if input.Sig == address {
+					spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
+				}
+			}
+		}
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return UTXOs
+}
+
+func (blc *BlockChain) GetBalance(address string) {
+	var amount float64
+	utxOs := blc.GetUTXOs(address)
+	for _, utxo := range utxOs {
+		amount += utxo.Value
+	}
+	fmt.Println(amount)
+}
+func (blc *BlockChain) FindNeedUtxos(from string, amount uint64) (map[string][]uint64, uint64) {
+	//TODO
+
+	return nil, 10
 }

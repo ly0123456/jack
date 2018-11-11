@@ -10,9 +10,11 @@ type ClI struct {
 
 }
 const Usage = `
-	./blockchain createBlockChain "创建区块链"
+Usage:
+	./blockchain createBlockChain ADDRESS "创建区块链"
 	./blockchain addBlock DATA   "添加数据到区块链"
 	./blockchain printChain "打印区块链"
+	./blockchian getBalance ADDRESS "获取指定地址余额"
 `
 //实现命令行的方法
 func (C *ClI)Run()  {
@@ -24,14 +26,19 @@ func (C *ClI)Run()  {
 	}
 	switch args[1] {
 	case "createBlockChain":
-		fmt.Println("创建区块链的命令被调用...")
-		blockChain := CreateBlockChain()
-		defer blockChain.Db.Close()
+		if len(args)==3 {
+			fmt.Println("创建区块链的命令被调用...")
+			address:=args[2]
+			blockChain := CreateBlockChain(address)
+			defer blockChain.Db.Close()
+		}
+
 	case "addBlock":
 		fmt.Println("添加区块被调用....")
 		if len(args)==3 {
 			blockChain := NewBlockChain()
-			blockChain.AddBlock(args[2])
+			//blockChain.FindNeedUtxos()
+			//blockChain.AddBlock(args[2])
 			defer blockChain.Db.Close()
 		}
 	case "printChain":
@@ -39,6 +46,15 @@ func (C *ClI)Run()  {
 		blockChain := NewBlockChain()
 		blockChain.PrintBlock()
 		defer blockChain.Db.Close()
+	case "getBalance":
+		if len(args)==3 {
+			blockChain := NewBlockChain()
+			//blockChain.FindNeedUtxos()
+			//blockChain.AddBlock(args[2])
+			blockChain.GetBalance(args[2])
+			defer blockChain.Db.Close()
+		}
+		
 	default:
 		fmt.Println("输入参数有误，请参照")
 		fmt.Println(Usage)
