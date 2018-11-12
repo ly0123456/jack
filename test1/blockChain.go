@@ -181,6 +181,8 @@ func (blc *BlockChain) PrintBlock() {
 		}
 	}
 }
+
+//判断数据库文件是否存在
 func IsExist() bool {
 	_, err := os.Stat(BlockChainDB)
 	if os.IsNotExist(err) {
@@ -188,20 +190,25 @@ func IsExist() bool {
 	}
 	return true
 }
+
+//找到为花费的output
 func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
 	var UTXOs []*TxOutput
+	//定义一个map用于存储已经用过的intput key 是交易id
 	spendUtxos := make(map[string][]uint64)
-
+	//new一个迭代器
 	it := blc.NewIterator()
-
 	for {
+		//遍历每个区块的交易
 		block := it.Next()
+		//遍历交易
 		for _, tx := range block.Txs {
 		OUT:
 			for i, UTXO := range tx.Outputs {
-
+				//找到当时人的output
 				if UTXO.ScriptPubKey == address {
 					fmt.Println("zhaodao l ")
+					//判断当前交易有没有已经花费的
 					if len(spendUtxos[string(tx.TXHash)]) != 0 {
 						for _, index := range spendUtxos[string(tx.TXHash)] {
 							if index == uint64(i) {
@@ -213,7 +220,9 @@ func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
 					UTXOs = append(UTXOs, UTXO)
 				}
 			}
+			//遍历所有的input
 			for _, input := range tx.Inputs {
+				//找到与用户相同的
 				if input.Sig == address {
 					spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
 				}
@@ -227,6 +236,7 @@ func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
 	return UTXOs
 }
 
+//查找余额
 func (blc *BlockChain) GetBalance(address string) {
 	var amount float64
 	utxOs := blc.GetUTXOs(address)
@@ -235,6 +245,8 @@ func (blc *BlockChain) GetBalance(address string) {
 	}
 	fmt.Println(amount)
 }
+
+//查找需要的UTXO
 func (blc *BlockChain) FindNeedUtxos(from string, amount uint64) (map[string][]uint64, uint64) {
 	//TODO
 

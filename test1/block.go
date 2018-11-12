@@ -6,8 +6,10 @@ import (
 	"encoding/gob"
 	"time"
 )
+
 //系统设置难度
-const Diff  =20
+const Diff = 20
+
 //定义一个区块的类
 type Block struct {
 	Vision        uint64 //版本号
@@ -21,9 +23,10 @@ type Block struct {
 	Nonce         uint64 //随机值
 	Txs           []*Transaction
 }
+
 //实例化Block
 func NewBlock(txs []*Transaction, prevHash []byte) *Block {
-	block:=Block{
+	block := Block{
 		Vision:        0,
 		Height:        0,
 		PrevBlockHash: prevHash,
@@ -35,30 +38,33 @@ func NewBlock(txs []*Transaction, prevHash []byte) *Block {
 	//运用pow算出当前hash nonce
 	//创建新的工作量证明
 	block.setMorkRoot()
-	pow:=NewPow(&block)
+	pow := NewPow(&block)
 	//使用工作量证明的方法，返回hash nonce
-	hash,nonce:=pow.Run()
-	block.Hash=hash
-	block.Nonce=nonce
-
-	return  &block
+	hash, nonce := pow.Run()
+	block.Hash = hash
+	block.Nonce = nonce
+	return &block
 }
+
 //实现一个block的序列化的方法
-func (b *Block)Encode()[]byte  {
+func (b *Block) Encode() []byte {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer) //先定义一个编码器
 	//然后用编码器编码
 	encoder.Encode(&b)
-	return  buffer.Bytes()
+	return buffer.Bytes()
 }
+
 //实现一个block的反序列化的方法
-func Decode(data []byte)*Block  {
+func Decode(data []byte) *Block {
 	var block Block
 	//定义一个解码器
 	decoder := gob.NewDecoder(bytes.NewReader(data))
 	decoder.Decode(&block)
 	return &block
 }
+
+//设置默克尔根
 func (b *Block) setMorkRoot() {
 	info := []byte{}
 	for _, tx := range b.Txs {
