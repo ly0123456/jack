@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"strconv"
 )
 
 //定义一个命令行类型
@@ -12,10 +13,16 @@ type ClI struct {
 const Usage = `
 Usage:
 	./blockchain createBlockChain ADDRESS "创建区块链"
-	./blockchain addBlock DATA   "添加数据到区块链"
 	./blockchain printChain "打印区块链"
 	./blockchian getBalance ADDRESS "获取指定地址余额"
+	./blockchian send FROM TO AMOUNT MINER DATA  "转账"
 `
+func checkArgs(count int) {
+	if len(os.Args) != count {
+		fmt.Println("参数无效!")
+		os.Exit(1)
+	}
+}
 //实现命令行的方法
 func (C *ClI)Run()  {
 	args := os.Args
@@ -26,34 +33,26 @@ func (C *ClI)Run()  {
 	}
 	switch args[1] {
 	case "createBlockChain":
-		if len(args)==3 {
+		checkArgs(3)
 			fmt.Println("创建区块链的命令被调用...")
 			address:=args[2]
-			blockChain := CreateBlockChain(address)
-			defer blockChain.Db.Close()
-		}
+			C.CreateBlockChain(address)
 
-	case "addBlock":
-		fmt.Println("添加区块被调用....")
-		if len(args)==3 {
-			blockChain := NewBlockChain()
-			//blockChain.FindNeedUtxos()
-			//blockChain.AddBlock(args[2])
-			defer blockChain.Db.Close()
-		}
+	case "send":
+		checkArgs(7)
+		from:=args[2]
+		to:=args[3]
+		amount,_:=strconv.ParseFloat(args[4],64)
+		miner:=args[5]
+		data:=args[6]
+		C.Send(from,to,amount,miner,data)
 	case "printChain":
 		fmt.Println("打印区块被调用.....")
-		blockChain := NewBlockChain()
-		blockChain.PrintBlock()
-		defer blockChain.Db.Close()
+		C.PrintChain()
 	case "getBalance":
-		if len(args)==3 {
-			blockChain := NewBlockChain()
-			//blockChain.FindNeedUtxos()
-			//blockChain.AddBlock(args[2])
-			blockChain.GetBalance(args[2])
-			defer blockChain.Db.Close()
-		}
+		checkArgs(3)
+		address:=args[2]
+		C.GetBalance(address)
 		
 	default:
 		fmt.Println("输入参数有误，请参照")

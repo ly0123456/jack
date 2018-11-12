@@ -192,10 +192,83 @@ func IsExist() bool {
 }
 
 //找到为花费的output
-func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
-	var UTXOs []*TxOutput
+func (blc *BlockChain) GetUTXOs(address string) []*UTXO {
+	var UTXOs []*UTXO
 	//定义一个map用于存储已经用过的intput key 是交易id
 	spendUtxos := make(map[string][]uint64)
+	//new一个迭代器
+	it := blc.NewIterator()
+	for {
+		//遍历每个区块的交易
+		block := it.Next()
+		//遍历交易
+		for _, tx := range block.Txs {
+		OUT:
+			for i, UTXo := range tx.Outputs {
+				//找到当时人的output
+				if UTXo.ScriptPubKey == address {
+					fmt.Println("zhaodao l ")
+					//判断当前交易有没有已经花费的
+					if len(spendUtxos[string(tx.TXHash)]) != 0 {
+						for _, index := range spendUtxos[string(tx.TXHash)] {
+							if index == uint64(i) {
+								continue OUT
+							}
+						}
+					}
+					utxo:=UTXO{tx.TXHash,int64(i),*UTXo}
+					UTXOs=append(UTXOs, &utxo)
+				}
+			}
+			//遍历所有的input
+			if !tx.IsCoinbaseTx() {
+				for _, input := range tx.Inputs {
+					//找到与用户相同的
+					if input.Sig == address {
+						spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
+					}
+				}
+			}
+
+		}
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return UTXOs
+}
+
+//查找余额
+func (blc *BlockChain) GetBalance(address string) {
+	var amount float64
+	utxOs := blc.GetUTXOs(address)
+	for _, utxo := range utxOs {
+		amount += utxo.TxOutput.Value
+	}
+	fmt.Println(amount)
+}
+//定义一个UTXO结构
+type UTXO struct {
+	TDID  []byte
+	Index int64
+	TxOutput
+}
+
+//查找需要的UTXO
+func (blc *BlockChain) FindNeedUtxos(address string, amount float64) (map[string][]int64, float64) {
+	needUTXOs:=make(map[string][]int64)
+	cale:=0.0
+	utxOs := blc.GetUTXOs(address)
+	for _,utxo:=range utxOs {
+		cale+=utxo.TxOutput.Value
+		needUTXOs[string(utxo.TDID)]=append(needUTXOs[string(utxo.TDID)], utxo.Index)
+		if cale>=amount {
+			return needUTXOs ,cale
+		}
+	}
+	//TODO
+	/*spendUtxos := make(map[string][]uint64)
 	//new一个迭代器
 	it := blc.NewIterator()
 	for {
@@ -216,39 +289,29 @@ func (blc *BlockChain) GetUTXOs(address string) []*TxOutput {
 							}
 						}
 					}
+					needUTXOs[string(tx.TXHash)]=append(needUTXOs[string(tx.TXHash)], int64(i))
+					cale+=UTXO.Value
+					if cale>=amount {
+						return needUTXOs ,cale
+					}
 
-					UTXOs = append(UTXOs, UTXO)
 				}
 			}
 			//遍历所有的input
-			for _, input := range tx.Inputs {
-				//找到与用户相同的
-				if input.Sig == address {
-					spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
+			if !tx.IsCoinbaseTx() {
+				for _, input := range tx.Inputs {
+					//找到与用户相同的
+					if input.Sig == address {
+						spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
+					}
 				}
 			}
+
 		}
 		if len(block.PrevBlockHash) == 0 {
 			break
 		}
-	}
+	}*/
 
-	return UTXOs
-}
-
-//查找余额
-func (blc *BlockChain) GetBalance(address string) {
-	var amount float64
-	utxOs := blc.GetUTXOs(address)
-	for _, utxo := range utxOs {
-		amount += utxo.Value
-	}
-	fmt.Println(amount)
-}
-
-//查找需要的UTXO
-func (blc *BlockChain) FindNeedUtxos(from string, amount uint64) (map[string][]uint64, uint64) {
-	//TODO
-
-	return nil, 10
+	return needUTXOs ,cale
 }

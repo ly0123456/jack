@@ -43,9 +43,15 @@ func NewCoinbaseTx(address, data string) *Transaction {
 	tx.SetId()
 	return &tx
 }
+func (tx *Transaction) IsCoinbaseTx() bool {
+	if tx.Inputs[0].TXId == nil && len(tx.Inputs) == 1 && tx.Inputs[0].Index == 0 {
+		return true
+	}
+	return false
+}
 
 //创建一个普通交易
-func NewTransaction(from, to string, amount uint64, blc *BlockChain) *Transaction {
+func NewTransaction(from, to string, amount float64, blc *BlockChain) *Transaction {
 	var inputs []*TxInput
 	var outputs []*TxOutput
 	//通过我的名字找到我的utxo
@@ -57,7 +63,7 @@ func NewTransaction(from, to string, amount uint64, blc *BlockChain) *Transactio
 	//便利我的utxo
 	for i, indexds := range Needutxos {
 		for _, index := range indexds {
-			input := TxInput{TXId: []byte(i), Index: index, Sig: from}
+			input := TxInput{TXId: []byte(i), Index: uint64(index), Sig: from}
 			inputs = append(inputs, &input)
 		}
 	}
