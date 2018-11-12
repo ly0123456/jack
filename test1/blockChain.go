@@ -2,7 +2,9 @@ package main
 
 import (
 	"./bolt"
+	"bytes"
 	"fmt"
+	"github.com/base58"
 	"log"
 	"os"
 )
@@ -15,7 +17,7 @@ const BlcokBucket = "BlcokBucket"
 
 //定义一个最后区块的hashKey
 const LastHashKey = "LastHashKey"
-
+const genesisInfo = "2009年1月3日，财政大臣正处于实施第二轮银行紧急援助的边缘"
 //定义一个区块链的类型
 type BlockChain struct {
 	Db       *bolt.DB //数据库的句柄
@@ -26,7 +28,7 @@ type BlockChain struct {
 func CreateBlockChain(address string) *BlockChain {
 	//定义一个当前区块的hash
 	var LastHash []byte
-	if IsExist() {
+	if IsExist(BlockChainDB) {
 		fmt.Println("数据库已经存在")
 		os.Exit(-1)
 	}
@@ -45,7 +47,7 @@ func CreateBlockChain(address string) *BlockChain {
 			if e != nil {
 				log.Panic(e)
 			}
-			tx := NewCoinbaseTx(address, "Gensis Block..... ")
+			tx := NewCoinbaseTx(address,genesisInfo )
 			newBlock := NewBlock([]*Transaction{tx}, []byte{})
 			//将新区块存入数据库，key就是当前区块的hash
 			e = buckt.Put(newBlock.Hash, newBlock.Encode())
@@ -69,7 +71,7 @@ func CreateBlockChain(address string) *BlockChain {
 func NewBlockChain() *BlockChain {
 	//定义一个当前区块的hash
 	var LastHash []byte
-	if !IsExist() {
+	if !IsExist(BlockChainDB) {
 		fmt.Println("数据库不存在，请检查")
 		os.Exit(-1)
 	}
@@ -183,16 +185,9 @@ func (blc *BlockChain) PrintBlock() {
 }
 
 //判断数据库文件是否存在
-func IsExist() bool {
-	_, err := os.Stat(BlockChainDB)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
 
 //找到为花费的output
-func (blc *BlockChain) GetUTXOs(address string) []*UTXO {
+func (blc *BlockChain) GetUTXOs(pubkeyHash []byte) []*UTXO {
 	var UTXOs []*UTXO
 	//定义一个map用于存储已经用过的intput key 是交易id
 	spendUtxos := make(map[string][]uint64)
@@ -206,7 +201,7 @@ func (blc *BlockChain) GetUTXOs(address string) []*UTXO {
 		OUT:
 			for i, UTXo := range tx.Outputs {
 				//找到当时人的output
-				if UTXo.ScriptPubKey == address {
+				if bytes.Equal(UTXo.PubkeyHash, pubkeyHash) {
 					fmt.Println("zhaodao l ")
 					//判断当前交易有没有已经花费的
 					if len(spendUtxos[string(tx.TXHash)]) != 0 {
@@ -216,15 +211,15 @@ func (blc *BlockChain) GetUTXOs(address string) []*UTXO {
 							}
 						}
 					}
-					utxo:=UTXO{tx.TXHash,int64(i),*UTXo}
-					UTXOs=append(UTXOs, &utxo)
+					utxo := UTXO{tx.TXHash, int64(i), *UTXo}
+					UTXOs = append(UTXOs, &utxo)
 				}
 			}
 			//遍历所有的input
 			if !tx.IsCoinbaseTx() {
 				for _, input := range tx.Inputs {
 					//找到与用户相同的
-					if input.Sig == address {
+					if bytes.Equal(HashPubkey(input.Pubkey), pubkeyHash) {
 						spendUtxos[string(input.TXId)] = append(spendUtxos[string(input.TXId)], input.Index)
 					}
 				}
@@ -242,12 +237,14 @@ func (blc *BlockChain) GetUTXOs(address string) []*UTXO {
 //查找余额
 func (blc *BlockChain) GetBalance(address string) {
 	var amount float64
-	utxOs := blc.GetUTXOs(address)
+	pubkeyHash := base58.Decode(address)[1 : len(base58.Decode(address))-4]
+	utxOs := blc.GetUTXOs(pubkeyHash)
 	for _, utxo := range utxOs {
 		amount += utxo.TxOutput.Value
 	}
 	fmt.Println(amount)
 }
+
 //定义一个UTXO结构
 type UTXO struct {
 	TDID  []byte
@@ -256,15 +253,15 @@ type UTXO struct {
 }
 
 //查找需要的UTXO
-func (blc *BlockChain) FindNeedUtxos(address string, amount float64) (map[string][]int64, float64) {
-	needUTXOs:=make(map[string][]int64)
-	cale:=0.0
-	utxOs := blc.GetUTXOs(address)
-	for _,utxo:=range utxOs {
-		cale+=utxo.TxOutput.Value
-		needUTXOs[string(utxo.TDID)]=append(needUTXOs[string(utxo.TDID)], utxo.Index)
-		if cale>=amount {
-			return needUTXOs ,cale
+func (blc *BlockChain) FindNeedUtxos(pubkeyHash []byte, amount float64) (map[string][]int64, float64) {
+	needUTXOs := make(map[string][]int64)
+	cale := 0.0
+	utxOs := blc.GetUTXOs(pubkeyHash)
+	for _, utxo := range utxOs {
+		cale += utxo.TxOutput.Value
+		needUTXOs[string(utxo.TDID)] = append(needUTXOs[string(utxo.TDID)], utxo.Index)
+		if cale >= amount {
+			return needUTXOs, cale
 		}
 	}
 	//TODO
@@ -313,5 +310,5 @@ func (blc *BlockChain) FindNeedUtxos(address string, amount float64) (map[string
 		}
 	}*/
 
-	return needUTXOs ,cale
+	return needUTXOs, cale
 }

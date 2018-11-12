@@ -7,7 +7,7 @@ func (cli *ClI)Send(from ,to string,amount float64,miner ,data string ){
 
 	blockChain := NewBlockChain()
 	//创建挖矿
-	coinbaseTx := NewCoinbaseTx(miner, data)
+	coinbaseTx := NewCoinbaseTx(miner)
 	txs:= []*Transaction{coinbaseTx}
 	//创建普通交易
 	transaction := NewTransaction(from, to, amount, blockChain)
