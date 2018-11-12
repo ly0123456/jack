@@ -12,10 +12,13 @@ type ClI struct {
 }
 const Usage = `
 Usage:
-	./blockchain createBlockChain ADDRESS "创建区块链"
+		./blockchain createBlockChain ADDRESS "创建区块链"
+	./blockchain addBlock DATA   "添加数据到区块链"
 	./blockchain printChain "打印区块链"
 	./blockchian getBalance ADDRESS "获取指定地址余额"
 	./blockchian send FROM TO AMOUNT MINER DATA  "转账"
+	./blockchian createWallet "创建钱包地址"
+	./blockchian listAllAddress "打印钱包中的所有地址"
 `
 func checkArgs(count int) {
 	if len(os.Args) != count {
@@ -53,7 +56,15 @@ func (C *ClI)Run()  {
 		checkArgs(3)
 		address:=args[2]
 		C.GetBalance(address)
-		
+	case "createWallet":
+		fmt.Printf("createWallet命令被调用\n")
+		checkArgs(2)
+
+		C.CreateWallet()
+	case "listAllAddress":
+		fmt.Printf("listAllAddress命令被调用\n")
+		checkArgs(2)
+		C.ListAllAddress()
 	default:
 		fmt.Println("输入参数有误，请参照")
 		fmt.Println(Usage)

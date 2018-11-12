@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func (cli *ClI)Send(from ,to string,amount float64,miner ,data string ){
 	fmt.Printf("%s 向 %s 转账 %f, 由 %s , data : %s\n", from, to, amount, miner, data)
@@ -33,4 +36,21 @@ func (cli *ClI) PrintChain() {
 func (cli *ClI) GetBalance(address string) {
 	bc := NewBlockChain()
 	bc.GetBalance(address)
+}
+func (cli *ClI)CreateWallet() {
+	wallet := NewWallet()
+	address := wallet.GetAddress()
+	if address == "" {
+		fmt.Printf("创建地址失败\n")
+		os.Exit(1)
+	}
+
+	fmt.Printf("生成的新地址%x\n" ,address)
+}
+func (cli *ClI)ListAllAddress()  {
+	wallets := NewWallets()
+	addresses := wallets.GetAddresses()
+	for  i,address:=range addresses  {
+		fmt.Printf("第%d的地址为%x\n",i+1,address)
+	}
 }
