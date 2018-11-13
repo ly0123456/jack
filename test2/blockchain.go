@@ -109,13 +109,11 @@ func (blc *BlockChain) AddBlock(txs []*Transaction) {
 		return nil
 	})
 }
-
 //定义一个迭代器
 type Iterator struct {
 	Db          *bolt.DB //来自于区块链
 	currentHash []byte   //随着移动改变
 }
-
 //实例化一个迭代器
 func (blc *BlockChain) NewItertor() *Iterator {
 	return &Iterator{blc.Db, blc.LastHash}
@@ -144,7 +142,6 @@ func (blc *BlockChain) PrintBlockChain() {
 	itertor := blc.NewItertor()
 	for {
 		block := itertor.Next()
-
 		fmt.Printf("===============================\n")
 		fmt.Printf("Version :%d\n", block.Version)
 		fmt.Printf("PrevBlockHash :%x\n", block.PrevBlockHash)
