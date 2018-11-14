@@ -10,7 +10,7 @@ func (cli *ClI)Send(from ,to string,amount float64,miner ,data string ){
 
 	blockChain := NewBlockChain()
 	//创建挖矿
-	coinbaseTx := NewCoinbaseTx(miner)
+	coinbaseTx := NewCoinbaseTx(miner,data)
 	txs:= []*Transaction{coinbaseTx}
 	//创建普通交易
 	transaction := NewTransaction(from, to, amount, blockChain)
@@ -38,8 +38,8 @@ func (cli *ClI) GetBalance(address string) {
 	bc.GetBalance(address)
 }
 func (cli *ClI)CreateWallet() {
-	wallet := NewWallet()
-	address := wallet.GetAddress()
+	wallets := NewWallets()
+	address := wallets.CreateWallets()
 	if address == "" {
 		fmt.Printf("创建地址失败\n")
 		os.Exit(1)
@@ -53,4 +53,7 @@ func (cli *ClI)ListAllAddress()  {
 	for  i,address:=range addresses  {
 		fmt.Printf("第%d的地址为%x\n",i+1,address)
 	}
+}
+func (cli *ClI)Help()  {
+	fmt.Println(Usage)
 }

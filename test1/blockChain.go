@@ -3,6 +3,7 @@ package main
 import (
 	"./bolt"
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/base58"
 	"log"
@@ -18,6 +19,7 @@ const BlcokBucket = "BlcokBucket"
 //定义一个最后区块的hashKey
 const LastHashKey = "LastHashKey"
 const genesisInfo = "2009年1月3日，财政大臣正处于实施第二轮银行紧急援助的边缘"
+
 //定义一个区块链的类型
 type BlockChain struct {
 	Db       *bolt.DB //数据库的句柄
@@ -47,7 +49,7 @@ func CreateBlockChain(address string) *BlockChain {
 			if e != nil {
 				log.Panic(e)
 			}
-			tx := NewCoinbaseTx(address,genesisInfo )
+			tx := NewCoinbaseTx(address, genesisInfo)
 			newBlock := NewBlock([]*Transaction{tx}, []byte{})
 			//将新区块存入数据库，key就是当前区块的hash
 			e = buckt.Put(newBlock.Hash, newBlock.Encode())
@@ -98,7 +100,32 @@ func NewBlockChain() *BlockChain {
 
 	return &BlockChain{db, LastHash}
 }
+func (blc *BlockChain) VerifyTransaction(tx *Transaction) bool {
+	if tx.IsCoinbaseTx() {
+		return true
+	}
+	prevTXs := make(map[string]*Transaction)
+
+	for _, input := range tx.Inputs {
+		tx := blc.FindTransactionById(input.TXId)
+		if tx==nil {
+			return false
+		}
+		prevTXs[string(input.TXId)] = tx
+
+	}
+	return tx.Verify(prevTXs)
+}
 func (blc *BlockChain) AddBlock(txs []*Transaction) {
+	validTXs := []*Transaction{}
+	for _, tx := range txs {
+		if blc.VerifyTransaction(tx) {
+			validTXs = append(validTXs, tx)
+		} else {
+			fmt.Println("这是一条无效的交易，校验失败!")
+		}
+	}
+
 	//找到前区块的hash
 	lastHash := blc.LastHash
 	//创建新的区块链
@@ -311,4 +338,33 @@ func (blc *BlockChain) FindNeedUtxos(pubkeyHash []byte, amount float64) (map[str
 	}*/
 
 	return needUTXOs, cale
+}
+func (blc *BlockChain) SignTransaction(tx *Transaction, privatekey *ecdsa.PrivateKey) bool {
+	prevUxtos := make(map[string]*Transaction)
+
+	for _, input := range tx.Inputs {
+		tx := blc.FindTransactionById(input.TXId)
+		if tx == nil {
+			return false
+		}
+		prevUxtos[string(input.TXId)] = tx
+	}
+	return tx.Sign(privatekey, prevUxtos)
+}
+func (blc *BlockChain) FindTransactionById(txid []byte) *Transaction {
+	it := blc.NewIterator()
+	for {
+		block := it.Next()
+		for _, tx := range block.Txs {
+			if bytes.Equal(tx.TXHash, txid) {
+				fmt.Println("找到了引用交易")
+				return tx
+			}
+		}
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+
+	return nil
 }

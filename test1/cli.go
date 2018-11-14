@@ -65,9 +65,10 @@ func (C *ClI)Run()  {
 		fmt.Printf("listAllAddress命令被调用\n")
 		checkArgs(2)
 		C.ListAllAddress()
+	case "help":
+		C.Help()
 	default:
 		fmt.Println("输入参数有误，请参照")
-		fmt.Println(Usage)
 
 	}
 }

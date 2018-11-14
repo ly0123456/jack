@@ -22,7 +22,7 @@ func NewWallets() *Wallets {
 	wallets.LoadFromFile()
 	return wallets
 }
-func (ws *Wallets) CreateWallets() {
+func (ws *Wallets) CreateWallets()string {
 	//new一个私钥对
 	wallet := NewWallet()
 	//生成钱包地址
@@ -30,7 +30,7 @@ func (ws *Wallets) CreateWallets() {
 
 	ws.Wallets[address] = wallet
 	ws.SaveToFile()
-
+	return address
 }
 //本地化钱包
 func (ws *Wallets) SaveToFile() bool {

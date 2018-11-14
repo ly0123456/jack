@@ -14,16 +14,3 @@ func IsExist(path string) bool {
 	return true
 }
 //将pubkey转化为pubkeyhash
-func HashPubkey(pubkey []byte)[]byte{
-	hash := sha256.Sum256(pubkey)
-	ripemder := ripemd160.New()
-	ripemder.Write(hash[:])
-	pubkeyhash := ripemder.Sum(nil)
-	return  pubkeyhash
-}
-//做两次sha256
-func TwoSha256Hash(pubkey []byte)[]byte{
-	sum256 := sha256.Sum256(pubkey)
-	bytes := sha256.Sum256(sum256[:])
-	return bytes[:4]
-}
